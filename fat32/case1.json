@@ -1,0 +1,143 @@
+{
+ "fs": "fat32",
+ "case": "1",
+ "seed": "cong-khai:MAU:fat32:1",
+ "image_offset": 0,
+ "params": {
+  "fs": "fat32",
+  "bytes_per_sector": 512,
+  "sectors_per_cluster": 8,
+  "cluster_size": 4096,
+  "reserved_sectors": 32,
+  "fat_count": 2,
+  "fat_size_sectors": 1024,
+  "root_cluster": 2,
+  "fat_offset": 16384,
+  "data_offset": 1064960
+ },
+ "files": [
+  {
+   "path": "DATA/I33.JPG",
+   "size": 104038,
+   "sha256": "ba72634cbd4f613b201c06055a86147ecd17ec7aa662eb05e414e8ee7242800f",
+   "runs": [
+    [
+     4,
+     26
+    ]
+   ],
+   "mtime": "2026-10-29T06:49:16"
+  },
+  {
+   "path": "DATA/W43.JPG",
+   "size": 376382,
+   "sha256": "196b4e482e2958614373a0f1956cc9e34875587657b8037757d0a7cca668d625",
+   "runs": [
+    [
+     156,
+     92
+    ]
+   ],
+   "mtime": "2026-10-29T07:06:22"
+  },
+  {
+   "path": "DATA/S92.PNG",
+   "size": 331298,
+   "sha256": "3ebd4f04492853dfbea6303d45b8eecb93ae40eb658d16cd7c0898f4eec8f657",
+   "runs": [
+    [
+     30,
+     81
+    ]
+   ],
+   "mtime": "2026-10-29T07:23:42"
+  },
+  {
+   "path": "DATA/L34.PDF",
+   "size": 176991,
+   "sha256": "6ab689384acfbae97513239bd933f24bafdf146cd5d32ec0721992bd40f66314",
+   "runs": [
+    [
+     111,
+     44
+    ]
+   ],
+   "mtime": "2026-10-29T07:40:06"
+  },
+  {
+   "path": "DATA/P89.TXT",
+   "size": 268,
+   "sha256": "d10745f22787fd7b29413fb02f1879a5b0d3498152ec0cd5a4f53ee5fc204144",
+   "runs": [
+    [
+     155,
+     1
+    ]
+   ],
+   "mtime": "2026-10-29T07:57:04"
+  }
+ ],
+ "unit_size": 4096,
+ "unit_base": 1056768,
+ "targets": [
+  "DATA/I33.JPG",
+  "DATA/W43.JPG",
+  "DATA/S92.PNG",
+  "DATA/L34.PDF",
+  "DATA/P89.TXT"
+ ],
+ "dap_an": {
+  "case": 1,
+  "fields": [
+   {
+    "field": "BPB_SecPerClus",
+    "offset": 13,
+    "size": 1,
+    "correct": 8,
+    "written": 2
+   },
+   {
+    "field": "BPB_SecPerClus",
+    "offset": 3085,
+    "size": 1,
+    "correct": 8,
+    "written": 2
+   },
+   {
+    "field": "BPB_RsvdSecCnt",
+    "offset": 14,
+    "size": 2,
+    "correct": 32,
+    "written": 16
+   },
+   {
+    "field": "BPB_RsvdSecCnt",
+    "offset": 3086,
+    "size": 2,
+    "correct": 32,
+    "written": 16
+   },
+   {
+    "field": "BPB_FATSz32",
+    "offset": 36,
+    "size": 4,
+    "correct": 1024,
+    "written": 1252
+   },
+   {
+    "field": "BPB_FATSz32",
+    "offset": 3108,
+    "size": 4,
+    "correct": 1024,
+    "written": 1252
+   }
+  ],
+  "targets": [
+   "DATA/I33.JPG",
+   "DATA/W43.JPG",
+   "DATA/S92.PNG",
+   "DATA/L34.PDF",
+   "DATA/P89.TXT"
+  ]
+ }
+}

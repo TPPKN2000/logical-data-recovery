@@ -1,0 +1,88 @@
+{
+ "fs": "fat32",
+ "case": "clean",
+ "seed": "cong-khai:MAU:fat32:clean",
+ "params": {
+  "fs": "fat32",
+  "bytes_per_sector": 512,
+  "sectors_per_cluster": 8,
+  "cluster_size": 4096,
+  "reserved_sectors": 32,
+  "fat_count": 2,
+  "fat_size_sectors": 1024,
+  "root_cluster": 2,
+  "fat_offset": 16384,
+  "data_offset": 1064960
+ },
+ "files": [
+  {
+   "path": "DATA/D94.JPG",
+   "size": 113042,
+   "sha256": "4cad56ad6601968aa0d6c07cbc58a800b9d3416a0d3b3eab08cbb5f8d2449885",
+   "runs": [
+    [
+     4,
+     28
+    ]
+   ],
+   "mtime": "2026-10-28T10:21:08"
+  },
+  {
+   "path": "DATA/F38.JPG",
+   "size": 345550,
+   "sha256": "dd477d9df92dd2c9ab5c019e242f6e0f645191cf57729249f3adc472a28cc7b8",
+   "runs": [
+    [
+     186,
+     85
+    ]
+   ],
+   "mtime": "2026-10-28T10:38:42"
+  },
+  {
+   "path": "DATA/Q68.PNG",
+   "size": 345404,
+   "sha256": "14282c2ed3bd3f9daccec2ca2751632d59e36538b96a02db1a8f213e75325031",
+   "runs": [
+    [
+     32,
+     85
+    ]
+   ],
+   "mtime": "2026-10-28T10:55:10"
+  },
+  {
+   "path": "DATA/U58.PDF",
+   "size": 275113,
+   "sha256": "9b9d6efb23472ed9f179e3981183555e8c6841d29ff8bdeab5e7860a349f3eac",
+   "runs": [
+    [
+     117,
+     68
+    ]
+   ],
+   "mtime": "2026-10-28T11:12:26"
+  },
+  {
+   "path": "DATA/Z66.TXT",
+   "size": 240,
+   "sha256": "7ba6f0e05fd4bde3957574e0034f47a65406fda20b5799d5c357353d0ddde9e3",
+   "runs": [
+    [
+     185,
+     1
+    ]
+   ],
+   "mtime": "2026-10-28T11:29:46"
+  }
+ ],
+ "unit_size": 4096,
+ "unit_base": 1056768,
+ "targets": [
+  "DATA/D94.JPG",
+  "DATA/F38.JPG",
+  "DATA/Q68.PNG",
+  "DATA/U58.PDF",
+  "DATA/Z66.TXT"
+ ]
+}
