@@ -1,0 +1,285 @@
+"""Kiểm tra cấu trúc và giải mã entropy JPEG baseline (Huffman) — chỉ dùng thư viện chuẩn.
+
+Mục đích: xác nhận một cách ghép các mảnh có cho ra một tập tin JPEG giải mã được hay không
+(Tình huống 3).  Không dựng ảnh (không dequantize / IDCT) — chỉ giải mã Huffman để đếm MCU.
+
+Dấu hiệu đúng của một cách ghép:
+  * giải mã đủ số MCU = ceil(W/8Hmax) * ceil(H/8Vmax) (theo SOF),
+  * đúng sau MCU cuối là marker EOI (FF D9),
+  * EOI nằm đúng cuối tập tin (vị trí size).
+"""
+from bisect import bisect_right
+
+
+class LoiGiaiMa(Exception):
+    pass
+
+
+class ThongTinJpeg:
+    def __init__(self):
+        self.ho_tro = False
+        self.ly_do = ""
+        self.scan_start = 0      # vị trí byte đầu tiên của dữ liệu entropy (sau SOS)
+        self.ri = 0              # restart interval
+        self.rong = self.cao = 0
+        self.mcus = 0
+        self.khoi = []           # [(chỉ số thành phần, bảng DC, bảng AC)] trong một MCU
+        self.ncomp = 0
+
+
+def _bang(counts, vals):
+    maxcode = [-1] * 18
+    mincode = [0] * 18
+    valptr = [0] * 18
+    code = 0
+    k = 0
+    for l in range(1, 17):
+        valptr[l] = k
+        mincode[l] = code
+        c = counts[l - 1]
+        code += c
+        k += c
+        maxcode[l] = code - 1 if c else -1
+        code <<= 1
+    return (mincode, maxcode, valptr, vals)
+
+
+def phan_tich_dau(buf):
+    """Phân tích phần đầu (SOI … SOS).  tt.ho_tro = False nếu không phải baseline tuần tự một lần quét."""
+    tt = ThongTinJpeg()
+    n = len(buf)
+    if buf[:2] != b"\xff\xd8":
+        tt.ly_do = "không có SOI"
+        return tt
+    dht = {}
+    sof = None
+    p = 2
+    while p + 4 <= n:
+        if buf[p] != 0xFF:
+            tt.ly_do = "marker sai"
+            return tt
+        m = buf[p + 1]
+        if m == 0xFF:
+            p += 1
+            continue
+        if m == 0x01 or 0xD0 <= m <= 0xD8:
+            p += 2
+            continue
+        if m == 0xD9:
+            tt.ly_do = "EOI trước SOS"
+            return tt
+        L = (buf[p + 2] << 8) | buf[p + 3]
+        if p + 2 + L > n:
+            tt.ly_do = "đầu bị cắt"
+            return tt
+        seg = buf[p + 4:p + 2 + L]
+        if m == 0xC4:
+            q = 0
+            while q + 17 <= len(seg):
+                tc_th = seg[q]
+                counts = list(seg[q + 1:q + 17])
+                tong = sum(counts)
+                vals = list(seg[q + 17:q + 17 + tong])
+                dht[(tc_th >> 4, tc_th & 15)] = _bang(counts, vals)
+                q += 17 + tong
+        elif m in (0xC0, 0xC1):
+            if len(seg) < 6 or seg[0] != 8:
+                tt.ly_do = "SOF không hỗ trợ"
+                return tt
+            cao = (seg[1] << 8) | seg[2]
+            rong = (seg[3] << 8) | seg[4]
+            nf = seg[5]
+            comps = []
+            for i in range(nf):
+                cid = seg[6 + 3 * i]
+                hv = seg[7 + 3 * i]
+                comps.append((cid, hv >> 4, hv & 15))
+            sof = (cao, rong, comps)
+        elif m in (0xC2, 0xC3, 0xC5, 0xC6, 0xC7, 0xC9, 0xCA, 0xCB, 0xCD, 0xCE, 0xCF):
+            tt.ly_do = "JPEG không phải baseline (SOF %02X)" % m
+            return tt
+        elif m == 0xDD:
+            tt.ri = (seg[0] << 8) | seg[1]
+        elif m == 0xDA:
+            if sof is None:
+                tt.ly_do = "SOS trước SOF"
+                return tt
+            cao, rong, comps = sof
+            ns = seg[0]
+            if ns != len(comps):
+                tt.ly_do = "nhiều lần quét (non-interleaved)"
+                return tt
+            idx = {c[0]: i for i, c in enumerate(comps)}
+            khoi = []
+            hmax = max(c[1] for c in comps)
+            vmax = max(c[2] for c in comps)
+            for i in range(ns):
+                cid = seg[1 + 2 * i]
+                td_ta = seg[2 + 2 * i]
+                if cid not in idx or (0, td_ta >> 4) not in dht or (1, td_ta & 15) not in dht:
+                    tt.ly_do = "thiếu bảng Huffman"
+                    return tt
+                ci = idx[cid]
+                _, h, v = comps[ci]
+                nb = 1 if ns == 1 else h * v
+                for _ in range(nb):
+                    khoi.append((ci, dht[(0, td_ta >> 4)], dht[(1, td_ta & 15)]))
+            if ns == 1:
+                mx = -(-rong // 8)
+                my = -(-cao // 8)
+            else:
+                mx = -(-rong // (8 * hmax))
+                my = -(-cao // (8 * vmax))
+            tt.ho_tro = True
+            tt.scan_start = p + 2 + L
+            tt.rong, tt.cao = rong, cao
+            tt.mcus = mx * my
+            tt.khoi = khoi
+            tt.ncomp = ns
+            return tt
+        p += 2 + L
+    tt.ly_do = "không thấy SOS"
+    return tt
+
+
+class _Dec:
+    __slots__ = ("buf", "n", "pos", "bits", "nb", "pad")
+
+    def __init__(s, buf, pos, bits, nb, pad):
+        s.buf = buf
+        s.n = len(buf)
+        s.pos = pos
+        s.bits = bits
+        s.nb = nb
+        s.pad = pad
+
+    def fill(s):
+        buf, pos, n, bits, nb, pad = s.buf, s.pos, s.n, s.bits, s.nb, s.pad
+        while nb <= 24:
+            if pos >= n:
+                raise LoiGiaiMa("hết dữ liệu")
+            b = buf[pos]
+            if b == 0xFF:
+                if pos + 1 >= n:
+                    raise LoiGiaiMa("hết dữ liệu")
+                x = buf[pos + 1]
+                if x == 0:
+                    pos += 2
+                elif 0xD0 <= x <= 0xD7 or x == 0xD9:
+                    bits <<= 8          # gặp marker thật: độn bit 0, không tiến
+                    nb += 8
+                    pad += 8
+                    continue
+                else:
+                    raise LoiGiaiMa("marker lạ FF%02X trong dữ liệu entropy" % x)
+            else:
+                pos += 1
+            bits = (bits << 8) | b
+            nb += 8
+        s.pos, s.bits, s.nb, s.pad = pos, bits, nb, pad
+
+    def huff(s, tab):
+        mincode, maxcode, valptr, vals = tab
+        if s.nb < 16:
+            s.fill()
+        bits, nb = s.bits, s.nb
+        code = 0
+        for l in range(1, 17):
+            code = (code << 1) | ((bits >> (nb - l)) & 1)
+            if code <= maxcode[l]:
+                s.nb = nb - l
+                s.bits = bits & ((1 << s.nb) - 1)
+                return vals[valptr[l] + code - mincode[l]]
+        raise LoiGiaiMa("mã Huffman không hợp lệ")
+
+    def recv(s, n):
+        if s.nb < n:
+            s.fill()
+        nb = s.nb - n
+        v = s.bits >> nb
+        s.bits &= (1 << nb) - 1
+        s.nb = nb
+        return v
+
+
+def giai_ma(buf, tt, trang_thai=None, snaps=None):
+    """Giải mã entropy từ trang_thai (mặc định: đầu dữ liệu quét).
+
+    Trả về ("ok", vị trí ngay sau EOI) hoặc ("loi", vị trí lỗi).
+    snaps (list) nhận ảnh chụp trạng thái tại đầu mỗi MCU để có thể giải mã tiếp từ giữa chừng.
+    trang_thai = (pos, bits, nb, pad, mcu, preds, rst).
+    """
+    if trang_thai is None:
+        trang_thai = (tt.scan_start, 0, 0, 0, 0, tuple([0] * tt.ncomp), 0)
+    pos, bits, nb, pad, mcu, preds, rst = trang_thai
+    d = _Dec(buf, pos, bits, nb, pad)
+    preds = list(preds)
+    khoi, total, ri = tt.khoi, tt.mcus, tt.ri
+    try:
+        while mcu < total:
+            if snaps is not None:
+                snaps.append((d.pos, d.bits, d.nb, d.pad, mcu, tuple(preds), rst))
+            for ci, dct, act in khoi:
+                t = d.huff(dct)
+                if t > 11:
+                    raise LoiGiaiMa("DC category sai")
+                if t:
+                    v = d.recv(t)
+                    if v < (1 << (t - 1)):
+                        v -= (1 << t) - 1
+                    preds[ci] += v
+                    if preds[ci] > 2100 or preds[ci] < -2100:
+                        raise LoiGiaiMa("DC vượt biên")
+                k = 1
+                while k < 64:
+                    rs = d.huff(act)
+                    sz = rs & 15
+                    if sz == 0:
+                        if rs == 0xF0:
+                            k += 16
+                            continue
+                        break
+                    k += rs >> 4
+                    if k > 63:
+                        raise LoiGiaiMa("AC vượt 63")
+                    d.recv(sz)
+                    k += 1
+                if k > 64:
+                    raise LoiGiaiMa("ZRL vượt khối")
+            mcu += 1
+            rst += 1
+            if ri and rst == ri and mcu < total:
+                if d.nb < d.pad or d.nb - d.pad >= 8:
+                    raise LoiGiaiMa("dữ liệu thừa trước RST")
+                d.bits = 0
+                d.nb = 0
+                d.pad = 0
+                if d.buf[d.pos] != 0xFF or not (0xD0 <= d.buf[d.pos + 1] <= 0xD7):
+                    raise LoiGiaiMa("thiếu RST")
+                d.pos += 2
+                preds = [0] * len(preds)
+                rst = 0
+        if d.nb < d.pad or d.nb - d.pad >= 8:
+            raise LoiGiaiMa("dữ liệu thừa/thiếu cuối quét")
+        if d.buf[d.pos:d.pos + 2] != b"\xff\xd9":
+            raise LoiGiaiMa("thiếu EOI")
+        return ("ok", d.pos + 2)
+    except (LoiGiaiMa, IndexError):
+        return ("loi", d.pos)
+
+
+def vi_tri_snapshot(snaps_pos, bien):
+    """Chỉ số ảnh chụp cuối cùng có pos <= bien (-1 nếu không có)."""
+    return bisect_right(snaps_pos, bien) - 1
+
+
+def entropy_hop_le(data, sau_ff=False):
+    """True nếu mọi byte FF trong data đi kèm 00 / RSTn / EOI (đặc trưng dữ liệu entropy JPEG)."""
+    i = data.find(b"\xff")
+    while i >= 0:
+        if i + 1 < len(data):
+            x = data[i + 1]
+            if not (x == 0 or 0xD0 <= x <= 0xD9 or x == 0xFF):
+                return False
+        i = data.find(b"\xff", i + 1)
+    return True
