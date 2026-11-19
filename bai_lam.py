@@ -11,6 +11,7 @@ Quy tắc:
 import utility as ut
 import case1
 import case2
+import case3
 
 class BaiLam:
     def __init__(self, log):
@@ -66,7 +67,7 @@ class BaiLam:
 
     def case3(self, img, out):
         """Tình huống 3 — sai chuỗi vị trí. Ghép mảnh theo nội dung, lưu tập tin JPEG mục tiêu."""
-        raise NotImplementedError("case3")
+        case3.xu_ly(img, out, self.log)
 
     def case_ext(self, img, out):
         """Tình huống mở rộng nhóm đã chọn (khai trong nhom.json)."""

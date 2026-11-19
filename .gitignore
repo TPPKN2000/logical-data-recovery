@@ -1,0 +1,33 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Ket qua phuc hoi / Output directories
+ket_qua/
+out/
+*.jsonl
+*.changes.json
+da_sua.img
+anh_hong.img
+
+# Du lieu anh dia / Disk images & Data
+*.img
+*.iso
+fat32/
+fat32*/
+data/
+DATA/
+
+# Thu muc test / scratch tam thoi
+test/
+
+# OS / Editor files
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+*.swp
+*~
+.~lock.*#
