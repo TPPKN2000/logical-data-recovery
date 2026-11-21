@@ -12,6 +12,7 @@ import utility as ut
 import case1
 import case2
 import case3
+import case_ext
 
 class BaiLam:
     def __init__(self, log):
@@ -71,7 +72,7 @@ class BaiLam:
 
     def case_ext(self, img, out):
         """Tình huống mở rộng nhóm đã chọn (khai trong nhom.json)."""
-        raise NotImplementedError("case_ext")
+        case_ext.xu_ly(img, out, self.log)
 
     # --------------------------------------------------------------- cộng điểm
     def repair(self, img, case, anh_moi):
@@ -80,11 +81,20 @@ class BaiLam:
             ban_sua.ghi_u16(..., ...)
             ban_sua.dong()
         """
-        raise NotImplementedError("repair")
+        if case == "1":
+            case1.sua_anh(img, anh_moi, self.log)
+        elif case == "2":
+            case2.sua_anh(img, anh_moi, self.log)
+        elif case == "3":
+            case3.sua_anh(img, anh_moi, self.log)
+        elif case == "ext":
+            case_ext.sua_anh(img, anh_moi, self.log)
+        else:
+            raise NotImplementedError(f"repair cho case {case}")
 
     def corrupt(self, img, dac_ta, anh_hong):
         """--corrupt: từ ảnh sạch, tạo ảnh hỏng theo đặc tả JSON của nhóm.
         Trả về danh sách vùng đã sửa (giảng viên đối chiếu tự động):
             [{"offset": 1234, "length": 4, "cau_truc": "BPB_RootClus (sector 0)"}, ...]
         Mọi byte thay đổi phải nằm trong các vùng này và không được chạm vùng dữ liệu tập tin."""
-        raise NotImplementedError("corrupt")
+        return case_ext.lam_hong_anh(img, dac_ta, anh_hong, self.log)

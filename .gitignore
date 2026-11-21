@@ -5,6 +5,7 @@ __pycache__/
 
 # Ket qua phuc hoi / Output directories
 ket_qua/
+recovered/
 out/
 *.jsonl
 *.changes.json

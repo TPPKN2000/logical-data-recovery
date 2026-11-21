@@ -106,3 +106,26 @@ def xu_ly(img, out, log):
             duong_dan = f"DATA/{e['name']}"
             out.luu(duong_dan, data)
             log.buoc(f"Lưu tập tin {duong_dan}", gia_tri=f"{len(data)} bytes ({len(seq)} clusters)")
+
+
+def sua_anh(img, anh_moi, log):
+    p = do_tim_tham_so_dung(img, log)
+    ban_sua = img.sao_chep(anh_moi)
+    bps = p["bps"]
+    spc = p["spc"]
+    rsvd = p["rsvd"]
+    fatsz = p["fatsz"]
+
+    # Sector 0: Boot Sector chính
+    ban_sua.ghi_u8(0x0D, spc)
+    ban_sua.ghi_u16(0x0E, rsvd)
+    ban_sua.ghi_u32(0x24, fatsz)
+
+    # Sector 6: Backup Boot Sector (chuẩn FAT32 sao lưu tại sector 6)
+    bk_off = 6 * bps
+    ban_sua.ghi_u8(bk_off + 0x0D, spc)
+    ban_sua.ghi_u16(bk_off + 0x0E, rsvd)
+    ban_sua.ghi_u32(bk_off + 0x24, fatsz)
+
+    ban_sua.dong()
+    log.quyet_dinh(f"Đã sửa Boot Sector và Backup Boot Sector thành công: {anh_moi}")

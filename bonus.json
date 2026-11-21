@@ -1,0 +1,9 @@
+{
+  "tinh_huong": "ext-root",
+  "he_thong": "fat32",
+  "mo_ta": "Làm hỏng con trỏ thư mục gốc BPB_RootClus tại Sector 0 và Sector 6",
+  "offset_sector0": 44,
+  "offset_sector6": 3116,
+  "length": 4,
+  "gia_tri_hong": 0
+}

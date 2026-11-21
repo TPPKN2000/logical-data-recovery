@@ -116,3 +116,56 @@ def xu_ly(img, out, log):
         seq = ut.lan_chuoi_fat(fat, f["fc"])
         data = ut.doc_du_lieu_file(img, seq, f["size"], p["data_off"], p["cs"])
         out.luu(f"DATA/{f['name']}", data)
+
+
+def sua_anh(img, anh_moi, log):
+    """Sửa Directory Entry: ghi lại FirstCluster vào trường 0x14 (HI) và 0x1A (LO)."""
+    p = ut.doc_bpb(img)
+    fat = ut.doc_bang_fat(img, p["fat_off"], p["fatsz"], p["bps"])
+    tong_so_cluster = (img.kich_thuoc - p["data_off"]) // p["cs"]
+
+    root_entries = ut.doc_muc_thu_muc(img, p["root"], p["data_off"], p["cs"])
+    data_dir = next((e for e in root_entries if e["name"] == "DATA" and e["is_dir"]), None)
+    if not data_dir:
+        return
+    data_entries = ut.doc_muc_thu_muc(img, data_dir["fc"], p["data_off"], p["cs"])
+
+    cluster_da_dung = set()
+    for c in ut.lan_chuoi_fat(fat, p["root"]): cluster_da_dung.add(c)
+    for c in ut.lan_chuoi_fat(fat, data_dir["fc"]): cluster_da_dung.add(c)
+
+    file_mat_fc = []
+    for e in data_entries:
+        if e["is_dir"]:
+            continue
+        if e["fc"] != 0:
+            for c in ut.lan_chuoi_fat(fat, e["fc"]):
+                cluster_da_dung.add(c)
+        else:
+            file_mat_fc.append(e)
+
+    chuoi_mo_coi = tim_cac_chuoi_mo_coi(fat, cluster_da_dung, tong_so_cluster)
+    chuoi_chua_ghep = list(chuoi_mo_coi)
+
+    ban_sua = img.sao_chep(anh_moi)
+    for f in file_mat_fc:
+        so_clus_can = math.ceil(f["size"] / p["cs"])
+        ext = f["name"].split(".")[-1]
+        chuoi_khop = None
+        for seq in chuoi_chua_ghep:
+            if len(seq) == so_clus_can:
+                dau = ut.doc_cluster(img, seq[0], p["data_off"], p["cs"])
+                if kiem_tra_dinh_dang(dau, ext):
+                    chuoi_khop = seq
+                    break
+        if chuoi_khop:
+            chuoi_chua_ghep.remove(chuoi_khop)
+            fc = chuoi_khop[0]
+            hi = (fc >> 16) & 0xFFFF
+            lo = fc & 0xFFFF
+            ban_sua.ghi_u16(f["entry_offset"] + 0x14, hi)
+            ban_sua.ghi_u16(f["entry_offset"] + 0x1A, lo)
+            log.quyet_dinh(f"Đã sửa Directory Entry cho {f['name']}: FirstCluster = {fc}")
+
+    ban_sua.dong()
+    log.quyet_dinh(f"Đã sửa các Directory Entry bị mất FirstCluster thành công: {anh_moi}")
