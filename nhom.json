@@ -1,8 +1,9 @@
 {
- "ma_nhom": "N00",
+ "ma_nhom": "lubaodat",
  "he_thong": "fat32",
  "thanh_vien": [
-  {"mssv": "", "ho_ten": "", "phu_trach": ""}
+  {"mssv": "23127338", "ho_ten": "Lữ Bảo Đạt", "phu_trach": "case 1, bonus"},
+  {"mssv": "23127405", "ho_ten": "Lương Thành Lộc", "phu_trach": "case 2, case 3"}
  ],
  "cong_diem": {
   "repair": [1, 2, 3],
